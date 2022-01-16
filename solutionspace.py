@@ -1,8 +1,8 @@
 # Solution Space Class
 from mne_features.univariate import get_univariate_funcs
 from mne_features.bivariate import get_bivariate_funcs
-from GeneticAlgorithm.dna import Gene, Genotype
-from GeneticAlgorithm.utils import Utils
+from GeFSalg_BS.dna import Gene, Genotype
+from GeFSalg_BS.utils import Utils
 from inspect import getfullargspec
 import numpy as np
 

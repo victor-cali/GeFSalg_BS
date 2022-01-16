@@ -4,12 +4,12 @@ import itertools
 import numpy as np
 from sklearn import svm
 from mne.epochs import BaseEpochs
-from GeneticAlgorithm.utils import Utils
+from GeFSalg_BS.utils import Utils
 np.seterr(divide='ignore', invalid='ignore')
-from GeneticAlgorithm.dna import Gene, Genotype
+from GeFSalg_BS.dna import Gene, Genotype
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import normalize
-from GeneticAlgorithm.solutionspace import SolutionSpace
+from GeFSalg_BS.solutionspace import SolutionSpace
 from mne_features.feature_extraction import extract_features
 import warnings
 

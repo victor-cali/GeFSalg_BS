@@ -1,5 +1,4 @@
 # Parameters Class
-from tabnanny import verbose
 import numpy as np
 from sklearn.neighbors import KDTree
 from mne_features.bivariate import get_bivariate_funcs

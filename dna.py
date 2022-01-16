@@ -1,7 +1,6 @@
 # Dataclasses Genotype and Gene
 from dataclasses import dataclass
 from typing import Union, Tuple
-import numpy as np
 
 @dataclass(frozen=True)
 class Gene:
