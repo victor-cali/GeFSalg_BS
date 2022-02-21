@@ -161,7 +161,7 @@ class GenAlgo():
                     # selection applied
                     else:
                         self.phenotype[:,i] = feature[:,self.genotype[i].idx]
-                except ValueError:
+                except:
                     self.phenotype[:,i] = np.zeros(len(self.epochs))
                 self._cache.update({self.genotype[i]: self.phenotype[:,i]})
         # Clean from nan, inf and -inf vals
