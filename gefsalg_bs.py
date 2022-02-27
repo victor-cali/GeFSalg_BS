@@ -2,13 +2,14 @@ import csv
 import sys
 import itertools
 import numpy as np
+import pandas as pd
 from sklearn import svm
 from mne.epochs import BaseEpochs
 from GeFSalg_BS.utils import Utils
 np.seterr(divide='ignore', invalid='ignore')
 from GeFSalg_BS.dna import Gene, Genotype
 from sklearn.model_selection import StratifiedKFold
-from sklearn.preprocessing import normalize
+from sklearn.preprocessing import StandardScaler
 from GeFSalg_BS.solutionspace import SolutionSpace
 from mne_features.feature_extraction import extract_features
 import warnings
@@ -84,9 +85,15 @@ class GenAlgo():
                 if genotype.score == -1.0:
                     self.genotype = genotype
                     self.map_geno_to_pheno()
-                    self.calculate_fitness()
+                    self.calculate_corr()
             self.population.sort()
-            
+            self.population = self.population[self.population_len//2:]
+
+            for genotype in self.population:
+                self.genotype = genotype
+                self.map_geno_to_pheno()
+                self.calculate_score()
+
             self.select_parents()
 
             self.cross_over()
@@ -98,7 +105,7 @@ class GenAlgo():
             self.update_mutation_rates()
 
             self.set_next_generation()
-            
+
             self.record_generation()
 
             print(f'Generation: {self.generation}, Extintions: {self.extintion}, Best: {self.best.score}')
@@ -127,8 +134,7 @@ class GenAlgo():
                 try:
                     feature = extract_features(
                     X = data, sfreq = self.utils.fs, 
-                    selected_funcs = [func], funcs_params = params
-                    )
+                    selected_funcs = [func], funcs_params = params)
                     # SOLVE FEATURE FORM
                     # When no rate is obtained (1 source)
                     # no selection applied
@@ -161,7 +167,7 @@ class GenAlgo():
                     # selection applied
                     else:
                         self.phenotype[:,i] = feature[:,self.genotype[i].idx]
-                except:
+                except Exception as e: 
                     self.phenotype[:,i] = np.zeros(len(self.epochs))
                 self._cache.update({self.genotype[i]: self.phenotype[:,i]})
         # Clean from nan, inf and -inf vals
@@ -176,13 +182,25 @@ class GenAlgo():
                 pass
             if np.any(np.isnan(self.phenotype)) or np.any(np.isinf(self.phenotype)):
                 np.nan_to_num(self.phenotype,copy=False)
+        self.phenotype = StandardScaler().fit_transform(self.phenotype)
         if genotype is not None:
             return self.phenotype
 
-    def calculate_fitness(self, phenotype = None):
+    def calculate_corr(self, phenotype = None):
         if phenotype is not None:
             self.phenotype = phenotype
-        X = normalize(self.phenotype)
+        df = pd.DataFrame(data = self.phenotype)
+        corr = df.corr(method = 'spearman')
+        corr = corr.values[np.triu_indices_from(corr.values,1)]
+        score = np.absolute(corr).mean()
+        self.genotype.score = score
+        if phenotype is not None:
+            return score
+
+    def calculate_score(self, phenotype = None):
+        if phenotype is not None:
+            self.phenotype = phenotype
+        X = self.phenotype
         y = self.epochs.events[:, -1]
         fitness = 0
         for train_index, test_index in self.skf.split(X, y):
@@ -193,8 +211,6 @@ class GenAlgo():
                 self.fitness_func.fit(X_train, y_train)
                 support_vects_num = len(self.fitness_func.support_)
             except:
-                print("Not possible get fitness")
-                print(sys.exc_info()[1])
                 support_vects_num = len(y)
             fitness += (len(y)-support_vects_num)/len(y)
         fitness /= self.folds_number
@@ -211,7 +227,7 @@ class GenAlgo():
         self.parents.append(best)
         while len(guide) < self.parents_len:
             selected = self.rng.choice(
-                np.arange(self.population_len), 
+                np.arange(self.population_len//2), 
                 self.tournament_len, replace=False
             )
             competitors = [self.population[i] for i in selected]
