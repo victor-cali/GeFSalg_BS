@@ -38,7 +38,7 @@ class Gene:
         if k1 in args:
             args[k1] = dict(args[k1])
         if k2 in args:
-            args[k2] = list(args[k2])
+            args[k2] = [args[k2]]
         return args
     @property
     def source(self):

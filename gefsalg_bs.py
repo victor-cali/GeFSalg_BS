@@ -120,7 +120,7 @@ class GenAlgo():
             self.genotype = genotype
 
         self.phenotype = np.zeros(self.utils.pheno_shape)
-        for i in range(self.genotype_len):   
+        for i in range(self.genotype_len): 
             # Get every gene
             if self.genotype[i] in self._cache.keys():
                 self.phenotype[:,i] = self._cache.get(self.genotype[i])
