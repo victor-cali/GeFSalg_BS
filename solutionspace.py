@@ -1,4 +1,5 @@
 # Solution Space Class
+from typing import Tuple
 from mne_features.univariate import get_univariate_funcs
 from mne_features.bivariate import get_bivariate_funcs
 from GeFSalg_BS.dna import Gene, Genotype
@@ -105,6 +106,18 @@ class SolutionSpace:
     def choose_feature(self) -> None:
         self._gene['selected_funcs'] = self._rng.choice(self._params['funcs'])
 
+    def _get_band(self, case: int) -> Tuple:
+        key = 'freq_bands'
+        if case == 1:
+            selection = self._rng.choice(len(self._params[key]), size = case, replace = False)
+        else:
+            selection = self._rng.choice(len(self._params[key]), size = case, replace = False)
+            band1,band2 = (self._params[key][i] for i in selection)
+            while max(0, min(band1[1], band2[1]) - max(band1[0], band2[0])) != 0:
+                selection = self._rng.choice(len(self._params[key]), size = case, replace = False)
+                band1,band2 = (self._params[key][i] for i in selection)
+        return selection
+
     def choose_source(self) -> None:
         func = self._gene["selected_funcs"]
         # 1 canal y 2 bandas 
@@ -113,7 +126,7 @@ class SolutionSpace:
         if 'freq_bands' in self.args:
             key = 'freq_bands'
             case = self._rng.integers(1,3)
-            selection = self._rng.choice(len(self._params[key]), size = case, replace = False)
+            selection = self._get_band(case)
             value = {f'band {i}': self._params[key][i] for i in selection}
             self._gene["params"].update({key: tuple(value.items())})
             self.args.discard(key)
@@ -163,7 +176,7 @@ class SolutionSpace:
                 case = self._rng.integers(1,3)
             else:
                 case = 1
-            indexes = self._rng.choice(len(self._params[key]), size = case, replace = False)
+            indexes = self._get_band(case)
             fb_selection = [self._params[key][i] for i in indexes]
 
             if len(ch_selection) == 1 and len(fb_selection) == 1:

@@ -6,7 +6,7 @@ from mne_features.univariate import get_univariate_funcs
 
 class Utils:
 
-    fbands = ((0.5,4.5),(4,8),(7,13),(13,18),(16,24),(18,30),(12,30),(7,30),(7,22),(7,17))
+    fbands = ((0.5,4),(4,7.5),(7.5,13),(7.5,17.5),(7.5,22),(7.5,30),(13,17.5),(13,30),(17.5,24),(17.5,30))
     
     def __init__(self, epochs, genotype_len):
 
