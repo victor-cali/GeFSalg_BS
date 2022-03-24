@@ -82,17 +82,11 @@ class GenAlgo():
         while self.generation < self.generations_lim:#self.generations_lim
             
             for genotype in self.population:
-                if genotype.score == -1.0:
-                    self.genotype = genotype
-                    self.map_geno_to_pheno()
-                    self.calculate_corr()
-            self.population.sort()
-            self.population = self.population[self.population_len//2:]
-
-            for genotype in self.population:
                 self.genotype = genotype
                 self.map_geno_to_pheno()
                 self.calculate_score()
+            self.population.sort()
+            self.population = self.population[self.population_len//2:]
 
             self.select_parents()
 
@@ -185,17 +179,6 @@ class GenAlgo():
         self.phenotype = StandardScaler().fit_transform(self.phenotype)
         if genotype is not None:
             return self.phenotype
-
-    def calculate_corr(self, phenotype = None):
-        if phenotype is not None:
-            self.phenotype = phenotype
-        df = pd.DataFrame(data = self.phenotype)
-        corr = df.corr(method = 'spearman')
-        corr = corr.values[np.triu_indices_from(corr.values,1)]
-        score = np.absolute(corr).mean()
-        self.genotype.score = score
-        if phenotype is not None:
-            return score
 
     def calculate_score(self, phenotype = None):
         if phenotype is not None:
