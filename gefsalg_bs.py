@@ -83,7 +83,7 @@ class GenAlgo():
             
             self.map_population()
             self.rate_population()
-            self.make_cross_over()
+            
             '''
             for genotype in self.population:
                 self.genotype = genotype
@@ -92,7 +92,9 @@ class GenAlgo():
             '''
             self.population.sort()
             self.population = self.population[self.population_len//2:]
-
+            
+            self.make_cross_over()
+            
             self.select_parents()
 
             #self.cross_over()
