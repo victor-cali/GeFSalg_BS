@@ -1,6 +1,7 @@
 import csv
 import sys
 import itertools
+from cv2 import fitLine
 import numpy as np
 import pandas as pd
 from sklearn import svm
@@ -105,7 +106,7 @@ class GenAlgo():
             print(f'Generation: {self.generation}, Extintions: {self.extintion}, Best: {self.best.score}')
         print(f'FINISHED\n Best Candidate: {self.best.score}')
         return self.best
-        
+
     def map_geno_to_pheno(self, genotype = None):
         if genotype is not None:
             assert type(genotype) is Genotype
@@ -124,7 +125,6 @@ class GenAlgo():
                 data = self.utils.filterbank.get_data(picks = self.genotype[i].source)
                 args = self.genotype[i].params
                 params = {f'{func}__{key}': val for key,val in args.items()}
-                # Get epochs instance with data filtered in specified frequency band
                 try:
                     feature = extract_features(
                     X = data, sfreq = self.utils.fs, 
@@ -192,10 +192,10 @@ class GenAlgo():
             #Train the model using the training sets
             try:
                 self.fitness_func.fit(X_train, y_train)
-                support_vects_num = len(self.fitness_func.support_)
+                accuracy = self.fitness_func.score(X_test, y_test)
             except:
-                support_vects_num = len(y)
-            fitness += (len(y)-support_vects_num)/len(y)
+                accuracy = 50.0
+            fitness += accuracy
         fitness /= self.folds_number
         score = 200.0*fitness-100.0
         self.genotype.score = score
