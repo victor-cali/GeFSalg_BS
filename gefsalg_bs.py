@@ -1,9 +1,6 @@
 import csv
-import sys
 import itertools
-from cv2 import fitLine
 import numpy as np
-import pandas as pd
 from sklearn import svm
 from mne.epochs import BaseEpochs
 from GeFSalg_BS.utils import Utils
