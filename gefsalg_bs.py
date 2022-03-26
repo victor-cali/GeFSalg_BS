@@ -84,20 +84,12 @@ class GenAlgo():
             self.map_population()
             self.rate_population()
             
-            '''
-            for genotype in self.population:
-                self.genotype = genotype
-                self.map_geno_to_pheno()
-                self.calculate_score()
-            '''
             self.population.sort()
             self.population = self.population[self.population_len//2:]
             
-            self.make_cross_over()
-            
             self.select_parents()
 
-            #self.cross_over()
+            self.make_cross_over()
 
             self.evolve_niche()
 
