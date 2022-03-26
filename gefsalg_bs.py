@@ -79,10 +79,9 @@ class GenAlgo():
 
         while self.generation < self.generations_lim:#self.generations_lim
             
-            for genotype in self.population:
-                self.genotype = genotype
-                self.map_geno_to_pheno()
-                self.calculate_score()
+            self.map_population()
+            self.rate_population()
+
             self.population.sort()
             self.population = self.population[self.population_len//2:]
 
@@ -103,6 +102,81 @@ class GenAlgo():
             print(f'Generation: {self.generation}, Extintions: {self.extintion}, Best: {self.best.score}')
         print(f'FINISHED\n Best Candidate: {self.best.score}')
         return self.best
+
+    def map_population(self) -> None:
+        genome = [gene for genotype in self.population for gene in genotype]
+        for gene in genome:
+            # Get every gene
+            if gene not in self._cache.keys():
+                # Get function name
+                func = gene.selected_funcs
+                data = self.utils.filterbank.get_data(picks = gene.source)
+                args = gene.params
+                params = {f'{func}__{key}': val for key,val in args.items()}
+                try:
+                    feature = extract_features(
+                        X = data, sfreq = self.utils.fs, 
+                        selected_funcs = [func], funcs_params = params
+                    )
+                    # SOLVE FEATURE FORM
+                    # When no rate is obtained (1 source)
+                    # no selection applied
+                    if feature.shape[-1] == 1:
+                        phenotype = feature[:,0]
+                    # When rate is obtained from 2 sources 
+                    # no selection applied
+                    elif gene.idx == -1 and feature.shape[-1] == 2:
+                        phenotype = feature[:,0]/feature[:,1]
+                    # When rate is obtained from 2 sources 
+                    # selection applied
+                    elif feature.shape[-1] == 8 and gene.selected_funcs == 'spect_slope':
+                        j = gene.idx
+                        phenotype = feature[:,j]/feature[:,j+4]
+                    # When no rate is obtained (1 source)
+                    # selection applied
+                    else:
+                        phenotype = feature[:,gene.idx]
+                    # Clean from nan, inf and -inf vals
+                    if np.any(np.isnan(phenotype)) or np.any(np.isinf(phenotype)):
+                        try:
+                            np.nan_to_num(phenotype, copy=False, nan=np.nan, posinf=np.nan, neginf=np.nan)
+                            with warnings.catch_warnings():
+                                warnings.simplefilter("ignore", category=RuntimeWarning)
+                                val = np.nanmean(phenotype)
+                            np.nan_to_num(self.phenotype, copy=False, nan=val, posinf=val, neginf=val)
+                        except:
+                            pass
+                        if np.any(np.isnan(self.phenotype)) or np.any(np.isinf(self.phenotype)):
+                            np.nan_to_num(phenotype,copy=False)
+                    self.phenotype = StandardScaler().fit_transform(self.phenotype)
+                except Exception as e: 
+                    phenotype = np.zeros(len(self.epochs))                    
+                self._cache.update({gene: phenotype})
+
+    def rate_population(self) -> None:
+        def make_X() -> np.ndarray:
+            x = np.zeros(self.utils.pheno_shape)
+            for g in range(self.genotype_len):
+                gene = genotype[g]
+                x[:, g] = self._cache.get(gene)
+            return x
+        for genotype in self.population:
+            X = make_X()
+            y = self.epochs.events[:, -1]
+            fitness = 0
+            for train_index, test_index in self.skf.split(X, y):
+                X_train, X_test = X[train_index], X[test_index]
+                y_train, y_test = y[train_index], y[test_index]
+                #Train the model using the training sets
+                try:
+                    self.fitness_func.fit(X_train, y_train)
+                    accuracy = self.fitness_func.score(X_test, y_test)
+                except:
+                    accuracy = 0.5
+                fitness += accuracy
+            fitness /= self.folds_number
+            score = 200.0*fitness-100.0
+            genotype.score = score
 
     def map_geno_to_pheno(self, genotype = None):
         if genotype is not None:
@@ -221,11 +295,16 @@ class GenAlgo():
         guide = set()
         self.offspring = list()
         while len(guide) < self.offspring_len:
-            selected = self.rng.choice(
-                np.arange(self.genoma_len),
-                self.genotype_len, replace = False
-            )
-            genes = tuple([self.genoma[i] for i in selected])
+            genes = []
+            while len(genes) < self.genotype_len:
+                selected_indexes = self.rng.choice(
+                    self.genoma_len,
+                    self.genotype_len, 
+                    replace = False
+                )
+                selected = set([self.genoma[i] for i in selected_indexes])
+                genes += selected
+            genes = tuple(genes[:self.genotype_len])
             if genes not in guide:
                 guide.add(genes)
                 self.offspring += genes
@@ -233,7 +312,8 @@ class GenAlgo():
     def mutate_offspring(self):
         for i in range((self.genotype_len * self.offspring_len)):
             toss = self.rng.choice(3, p=self.mutation_rates)
-            if  toss == 0:
+            functional_gene = np.count_nonzero(self._cache.get(self.offspring[i]))
+            if  not functional_gene or toss == 0:
                 mutation = self.solution_space.build_gene()
                 del self.offspring[i]
                 self.offspring.insert(i, mutation)
