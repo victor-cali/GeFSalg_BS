@@ -5,7 +5,6 @@ import numpy as np
 from sklearn import svm
 from mne.epochs import BaseEpochs
 from GeFSalg_BS.utils import Utils
-np.seterr(divide='ignore', invalid='ignore')
 from GeFSalg_BS.dna import Gene, Genotype
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import StandardScaler
@@ -14,6 +13,7 @@ from mne_features.feature_extraction import extract_features
 from scipy.stats import spearmanr, SpearmanRConstantInputWarning
 
 warnings.filterwarnings("error")
+np.seterr(divide='ignore', invalid='ignore')
 
 class GenAlgo():
 
@@ -77,11 +77,13 @@ class GenAlgo():
 
     def __call__(self, *args: any, **kwds: any) -> any:
         self.population = self.solution_space.build_population(self.population_len)
+        
         self.best = max(self.population)
 
         while self.generation < self.generations_lim:#self.generations_lim
             
             self.map_population()
+
             self.rate_population()
             
             self.population.sort()
@@ -107,6 +109,9 @@ class GenAlgo():
     
     def map_population(self) -> None:
         genome = [gene for genotype in self.population for gene in genotype]
+        for key in set(self._cache) - set(genome):
+            del self._cache[key]
+        print(len(self._cache))
         for gene in genome:
             # Get every gene
             if gene not in self._cache.keys():
@@ -145,15 +150,13 @@ class GenAlgo():
                             with warnings.catch_warnings():
                                 warnings.simplefilter("ignore", category=RuntimeWarning)
                                 val = np.nanmean(phenotype)
-                            np.nan_to_num(self.phenotype, copy=False, nan=val, posinf=val, neginf=val)
-                        except:
+                            np.nan_to_num(phenotype, copy=False, nan=val, posinf=val, neginf=val)
+                        except Exception as e:
                             pass
-                        if np.any(np.isnan(self.phenotype)) or np.any(np.isinf(self.phenotype)):
-                            np.nan_to_num(phenotype,copy=False)
-                    self.phenotype = StandardScaler().fit_transform(self.phenotype)
-                except Exception as e: 
-                    phenotype = np.zeros(len(self.epochs))                    
-                self._cache.update({gene: phenotype})
+                    phenotype = StandardScaler().fit_transform(phenotype.reshape(-1, 1))
+                except Exception as e:
+                    phenotype = np.zeros((len(self.epochs),1))
+                self._cache.update({gene: phenotype[:,0]})
 
     def rate_population(self) -> None:
         def make_X() -> np.ndarray:
@@ -180,10 +183,28 @@ class GenAlgo():
             score = 200.0*fitness-100.0
             genotype.score = score
 
+    def select_parents(self):
+        guide = set()
+        self.parents = list()
+        best = max(self.population)
+        guide.add(best.genes)
+        self.parents.append(best)
+        while len(guide) < self.parents_len:
+            selected = self.rng.choice(
+                np.arange(self.population_len//2), 
+                self.tournament_len, replace=False
+            )
+            competitors = [self.population[i] for i in selected]
+            winner = max(competitors)
+            if winner.genes not in guide:
+                guide.add(winner.genes)
+                self.parents.append(winner)
+        self.genoma = tuple(itertools.chain(*guide))
+
     def make_cross_over(self) -> None:
         genome = [gene for genotype in self.population for gene in genotype]
-        reference_genes = self.rng.choice(len(genome), size = self.offspring_len, replace = False)
-        offspring = [[genome[g]] for g in reference_genes]
+        reference_genes = self.rng.choice(len(self.genoma), size = self.offspring_len//2, replace = False)
+        offspring = [[self.genoma[g]] for g in reference_genes]
         for new_genotype in offspring:
             for _ in range(self.genotype_len-1):
                 correlations = []
@@ -194,6 +215,17 @@ class GenAlgo():
                 least_correlated_gene = genome[g]
                 new_genotype.append(least_correlated_gene)
         self.offspring = [gene for genotype in offspring for gene in genotype]
+
+        guide = set()
+        while len(guide) < self.offspring_len//2:
+            selected = self.rng.choice(
+                np.arange(self.genoma_len),
+                self.genotype_len, replace = False
+            )
+            genes = tuple([self.genoma[i] for i in selected])
+            if genes not in guide:
+                guide.add(genes)
+                self.offspring += genes
 
     def check_corr(self, new_genotype, new_gene):
         correlation = 0
@@ -302,24 +334,6 @@ class GenAlgo():
         self.genotype.score = score
         if phenotype is not None:
             return score
-
-    def select_parents(self):
-        guide = set()
-        self.parents = list()
-        best = max(self.population)
-        guide.add(best.genes)
-        self.parents.append(best)
-        while len(guide) < self.parents_len:
-            selected = self.rng.choice(
-                np.arange(self.population_len//2), 
-                self.tournament_len, replace=False
-            )
-            competitors = [self.population[i] for i in selected]
-            winner = max(competitors)
-            if winner.genes not in guide:
-                guide.add(winner.genes)
-                self.parents.append(winner)
-        self.genoma = tuple(itertools.chain(*guide))
 
     def cross_over(self):
         guide = set()
