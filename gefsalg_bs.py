@@ -111,7 +111,6 @@ class GenAlgo():
         genome = [gene for genotype in self.population for gene in genotype]
         for key in set(self._cache) - set(genome):
             del self._cache[key]
-        print(len(self._cache))
         for gene in genome:
             # Get every gene
             if gene not in self._cache.keys():
