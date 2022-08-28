@@ -3,6 +3,7 @@ import warnings
 import itertools
 import numpy as np
 from sklearn import svm
+from math import ceil
 from mne.epochs import BaseEpochs
 from GeFSalg_BS.utils import Utils
 from GeFSalg_BS.dna import Gene, Genotype
@@ -36,11 +37,11 @@ class GenAlgo():
     def __init__(self,
         out_path: str, 
         epochs: BaseEpochs,
-        genotype_len: int = 4,
-        extintions_lim: int = 100,
-        population_len: int = 100,
+        genotype_len: int = 5,
+        extintions_lim: int = 50,
+        population_len: int = 50,
         survival_rate: float = 0.1,
-        generations_lim: int = 1000
+        generations_lim: int = 500
     ) -> None:
         # Input arguments
         self.out_path = out_path
@@ -53,7 +54,7 @@ class GenAlgo():
         # Other parameters for the evolution cycle and data obtention
         self.parents_len = int(self.population_len*self.survival_rate)
         self.niche_len = int(self.population_len*self.survival_rate)
-        self.tournament_len = self.parents_len // 2
+        self.tournament_len = ceil(self.parents_len / 2)
         self.genoma_len = self.genotype_len * self.parents_len
         self.offspring_len = self.population_len - self.parents_len - self.niche_len
         # Support objects
@@ -393,8 +394,8 @@ class GenAlgo():
                 self.extintion_fate = self.rng.choice(np.arange(50,100,10))
                 self.population.append(self.best)
                 self.progress_counter = 0
+                self.generation += 1
                 self.extintion += 1
-                self.generation = 0
         else:
             self.population = self.offspring + self.parents + self.niche
             self.generation += 1
