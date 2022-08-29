@@ -404,7 +404,7 @@ class GenAlgo():
         with open(self.out_path, 'a', encoding='UTF8', newline='') as f:
             writer = csv.writer(f)
             row = [repr(gene) for gene in self.best]
-            row += [self.generation-1, self.extintion, genotype.score]
+            row += [self.generation-1, self.extintion, self.best.score]
             writer.writerow(row)
 
     def update_mutation_rates(self):
