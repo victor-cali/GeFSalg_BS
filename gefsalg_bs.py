@@ -81,7 +81,7 @@ class GenAlgo():
         
         self.best = max(self.population)
 
-        while self.generation < self.generations_lim:#self.generations_lim
+        while self.generation < self.generations_lim:
             
             self.map_population()
 
@@ -191,7 +191,7 @@ class GenAlgo():
         self.parents.append(best)
         while len(guide) < self.parents_len:
             selected = self.rng.choice(
-                np.arange(self.population_len//2), 
+                len(self.population), 
                 self.tournament_len, replace=False
             )
             competitors = [self.population[i] for i in selected]
